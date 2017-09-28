@@ -7,18 +7,18 @@ Created on Thu Sep 21 09:27:57 2017
 """
 
 #
-import basiccustinfo
+import getcustinfo as gci
 import chequelimit
 import creditlimit
-import psycopg2
+
 
 #main function update limits
 def update_limits():
     print("Update Limits")
 
     #get a list of all customer bizids, storename, ordercount 
-    basiccustinfo.getcustinfo()
-
+    cust_data = gci.getcustinfo()
+    print(cust_data.head())
 
     #update daily cheque limit
     limit = chequelimit.genchequelimit()

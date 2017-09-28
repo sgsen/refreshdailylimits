@@ -10,6 +10,7 @@ Created on Thu Sep 21 09:27:57 2017
 import basiccustinfo
 import chequelimit
 import creditlimit
+import psycopg2
 
 #main function update limits
 def update_limits():

@@ -1,1 +1,1 @@
-create_engine_string = 'postgresql://sgsen:jCfUvA762777@datawarehouse-cluster.cgatqp75ezrh.ap-southeast-1.redshift.amazonaws.com:5439/datawarehousedb'
+no

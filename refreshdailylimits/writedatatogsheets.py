@@ -11,7 +11,7 @@ from __future__ import print_function
 import pandas as pd
 
 #%%
-#this doesn NOT
+#this doesn NOT work
 from gspread_pandas import Spread
 
 # 'Example Spreadsheet' needs to already exist and your user must have access to it
@@ -46,18 +46,62 @@ s
 data = s.find('Sheet1').to_frame(index_col='businessid')
 
 data.head()
+
+
 #%%
-# THIS DOES NOT WORK
+# This also works
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 scope = ['https://spreadsheets.google.com/feeds']
-s_file = "~/.config/gspread/google_secret.json"
+s_file = "/home/sohamgsen/.config/gspread/google_secret.json"
 
-#fails here
+
 credentials = ServiceAccountCredentials.from_json_keyfile_name(s_file, scope)
-#failes here
 
 gc = gspread.authorize(credentials)
 
-wks = gc.open("customer_credit_details").Sheet1
+wks = gc.open("customer_credit_details")
+
+
+sheet = wks.sheet1
+dataframe = pd.DataFrame(sheet.get_all_records())
+
+dataframe.head()
+
+#%%
+
+## GOLD!! ##
+
+import pygsheets
+
+gc = pygsheets.authorize(outh_file='/home/sohamgsen/Dropbox/Jumbotail/projects/.config/pygsheets/google_secret.json')
+
+# Open spreadsheet and then workseet
+sh = gc.open('test')
+wks = sh.sheet1
+data = wks.get_as_df()
+data.head()
+sh.add_worksheet("test_sheet2")
+
+## gold
+sheet2 = sh.worksheet_by_title("test_sheet2")
+
+sheet2.set_dataframe(data, 'A2')
+
+###
+oct5 = gc.open('Check_Credit_Reference_Oct_5_2017')
+oct5_sht = oct5.worksheet_by_title("Check_Credit_Reference_Oct_5_2017")
+data = oct5_sht.get_as_df()
+data.head()
+
+#sh.del_worksheet(testoct5)
+
+sh.add_worksheet("oct5", 5000, 30)
+testoct5 = sh.worksheet_by_title("oct5")
+testoct5.set_dataframe(data, 'A3')
+
+
+# share the sheet with your friend
+sh.share("sohamgsen@gmail.com")
+

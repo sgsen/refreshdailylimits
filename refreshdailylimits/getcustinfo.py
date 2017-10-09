@@ -11,7 +11,9 @@ def getcustinfo():
     
     #%%
     ## variables
-    create_engine_string = ''
+    #create_engine_string = ''
+    
+    
     
     query = '''SELECT DISTINCT b.businessid AS bid,
            displayname AS storename,

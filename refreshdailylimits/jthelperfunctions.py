@@ -1,41 +1,42 @@
 # -*- coding: utf-8 -*-
 
+def getGsheet(spreadsheetname, worksheetname, secretkeylocation):
+    import pygsheets
+    
+    gc = pygsheets.authorize(outh_file=secretkeylocation)
+    
+    # Open spreadsheet and then workseet
+    sh = gc.open(spreadsheetname)
+    wks = sh.worksheet_by_title(worksheetname)
+    dataframe = wks.get_as_df()
+    return dataframe
 
-import pygsheets
-
-gc = pygsheets.authorize(outh_file='/home/sohamgsen/Dropbox/Jumbotail/projects/.config/pygsheets/google_secret.json')
-
-# Open spreadsheet and then workseet
-sh = gc.open('test')
-wks = sh.sheet1
-data = wks.get_as_df()
-data.head()
-sh.add_worksheet("test_sheet2")
-
-## gold
-sheet2 = sh.worksheet_by_title("test_sheet2")
-
-sheet2.set_dataframe(data, 'A2')
-
-###
-oct5 = gc.open('Check_Credit_Reference_Oct_5_2017')
-oct5_sht = oct5.worksheet_by_title("Check_Credit_Reference_Oct_5_2017")
-data = oct5_sht.get_as_df()
-data.head()
-
-#sh.del_worksheet(testoct5)
-
-sh.add_worksheet("oct5", 5000, 30)
-testoct5 = sh.worksheet_by_title("oct5")
-testoct5.set_dataframe(data, 'A3')
-
-
-# share the sheet with your friend
-sh.share("sohamgsen@gmail.com")
-
-#write to gs
-
-#get file from gs
+    #data.head()
+    #sh.add_worksheet("test_sheet2")
+    
+    ## gold
+    #sheet2 = sh.worksheet_by_title("test_sheet2")
+    
+    #sheet2.set_dataframe(data, 'A2')
+    
+    ###
+    #oct5 = gc.open('Check_Credit_Reference_Oct_5_2017')
+    #oct5_sht = oct5.worksheet_by_title("Check_Credit_Reference_Oct_5_2017")
+    #data = oct5_sht.get_as_df()
+    #data.head()
+    
+    #sh.del_worksheet(testoct5)
+    
+    #sh.add_worksheet("oct5", 5000, 30)
+    #testoct5 = sh.worksheet_by_title("oct5")
+    #testoct5.set_dataframe(data, 'A3')
+    
+    # share the sheet with your friend
+    #sh.share("sohamgsen@gmail.com")
+    
+    #write to gs
+    
+    #get file from gs
 
 # get file from AWS
 def getDataFromRedshift(query,rs_user_id,rs_password):
@@ -52,12 +53,13 @@ def getDataFromRedshift(query,rs_user_id,rs_password):
 def getUserCredentials():
     import json
     try:
-        credentials = json.load(open("credentials.txt"))
+        credentials = json.load(open("__pycache__/credentials.txt"))
     except:
         rs_user_id= input('Give me your redshift userid: ')
         rs_password=input('Give me your redshift password: ')
-        credentials={'rs_user_id':rs_user_id,'rs_password':rs_password}
-        json.dump(credentials, open("credentials.txt",'w'))
+        googlesecretkey_location=input('Path for google_secret.json file: ')
+        credentials={'rs_user_id':rs_user_id,'rs_password':rs_password,'googlesecretkey_location':googlesecretkey_location }
+        json.dump(credentials, open("__pycache__/credentials.txt",'w'))
     return credentials
 
 

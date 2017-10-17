@@ -23,10 +23,3 @@ def get_customerdata ():
 #everbounced_count, everbounced_value,
 #total credit paid count, total credit paid value, repaycreditbounce_attempts
 
-datatest = get_customerdata()
-#%%
-import jthelperfunctions as hf
-
-credentials=hf.getUserCredentials()
-
-test = hf.getGsheet("creditcosts","Sheet1",credentials.get('googlesecretkey_location'))

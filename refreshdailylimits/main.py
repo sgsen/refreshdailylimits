@@ -1,3 +1,4 @@
-import jtdatafunctions as dataFunctions
-cust_data=dataFunctions.get_customerdata()
+import jtdatafunctions as df
+cust_data=df.get_customerdata()
+check_data=df.get_jtchequedata()
 

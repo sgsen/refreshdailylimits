@@ -88,7 +88,7 @@ def get_jtchequedata():
     import numpy as np
     import pandas as pd
     import re           
-    #%%
+
     credentials=jthf.getUserCredentials()
     
     #all bids
@@ -101,7 +101,7 @@ def get_jtchequedata():
                                      credentials.get('googlesecretkey_location'))
     del credentials
     
-    #%% choose the columns that are required for analysis
+    # choose the columns that are required for analysis
     
     selectCols = ['Date', 'BID', 'Amount', 'Final Status', 'Bounce Reason',
            'Replacement Days']
@@ -113,7 +113,7 @@ def get_jtchequedata():
                                     'Amount':'amount', 'Final Status':'finalstatus',
                                     'Bounce Reason':'bouncereason', 'Replacement Days':
                                         'repldays'}, inplace=True)
-    #%% deal with the mixed data types in amount column
+    # deal with the mixed data types in amount column
     #convert all to string
     chequeTransData['amount'] = chequeTransData['amount'].apply(lambda x: str(x))
     #get rid of commas
@@ -123,7 +123,7 @@ def get_jtchequedata():
     #convert all of these to float type
     chequeTransData['amount'] = chequeTransData['amount'].astype(float)
 
-    #%% fix repldays to be an int
+    # fix repldays to be an int
     #chequeTransData['repldays']
     
     chequeTransData['repldays'] = chequeTransData['repldays'].apply(lambda x: str(x))
@@ -134,16 +134,126 @@ def get_jtchequedata():
     chequeTransData['repldays']= chequeTransData['repldays'].str.strip('') 
     chequeTransData['repldays']=chequeTransData['repldays'].apply(lambda x: int(x))
 
-    #%%
+    #
     chequeData = custList.apply(chequeCalcs_helper, args=(chequeTransData,), axis=1)
     #chequeData.head()
     return chequeData
-#%%
+
+    
+
+#
+#1. creditProduct - done
+#2. creditTransactionLimit - done
+#3. creditOverallLimit - done
+#4. currCreditOutsCount - done
+#5. currCreditOutsValue - done
+#6. creditEverBouncedCount - done
+#7. creditEverBouncedValue - done
+#8. creditAvgRepayDays - done
+#9. creditAvgRepayAttemps - done
+#10. creditEverUseCount - done
+#11. creditEverUseValue - done
+   
 
 def get_creditdata():
     import jthelperfunctions as jthf
+    import numpy as np
+    import pandas as pd
+
+    #1. creditProduct - done
+    #2. creditTransactionLimit - done
+    #3. creditOverallLimit - done
     credentials=jthf.getUserCredentials()
+    cdata = get_customerdata()
+    
+    #
+    creditCustData = jthf.getGsheet("customer_credit_details","Sheet1",credentials.get('googlesecretkey_location'))
+    
+    creditCustData = creditCustData[creditCustData['Status'] == "ACTIVE"]
+    creditCustData = creditCustData[['businessid', 'transactional_limit', 'overall_limit', 'product']]
+    creditCustData.rename(index=str, 
+                          columns={'businessid':'bid', 'transactional_limit':'creditTransactionLimit', 
+                                   'overall_limit':'creditOverallLimit', 'product':'creditProduct'},
+                                   inplace=True)
+    # merge creditCustData with custList
+    custList = cdata.iloc[:,0:1]
+    custList.rename(index=str, columns={'custbid':'bid'}, inplace=True)
+    custList=pd.merge(custList, creditCustData, on='bid', how='left')
+    
+    #
     creditTranData = jthf.getGsheet("[INTERNAL] FundsCorner <> Jumbotail | Collection Tracker", "Final Sheet", credentials.get('googlesecretkey_location'))
-    #INCOMPLETE
-    #need to manipulate the data coming in to have the appropriate cols and history
-    #return creditData
+    #%credit transaction data, which columsn reqd for 
+    selCols = ['cust_id', 'net_collection_amount', 'JT_confirmed_cleared',
+               'ever_bounced', 'days_to_repay', 'collection_attempts']
+    
+    creditTranData = creditTranData[selCols]
+    
+    creditTranData.rename(index=str,
+                          columns={'cust_id':'bid', 'net_collection_amount':'amount',
+                                   'JT_confirmed_cleared':'status', 
+                                   'days_to_repay':'repayDays',
+                                   'collection_attempts':'repayAttempts'}, inplace=True)
+    
+    creditTranData = creditTranData[creditTranData['bid']!=""]
+    #ensure numeric columns are numeric
+    creditTranData['amount'] = creditTranData.amount.apply(lambda x: jthf.ensureNum(x))
+    creditTranData['repayDays'] = creditTranData.repayDays.apply(lambda x: jthf.ensureNum(x))
+    creditTranData['repayAttempts'] = creditTranData.repayAttempts.apply(lambda x: jthf.ensureNum(x))
+    
+    #Calculations by customer
+    grpCrTrnsData = creditTranData.groupby('bid', as_index=False)
+    
+    #grpCrTrnsData.apply(lambda x: x[x['status']!="Cleared"]['amount'].sum())
+    
+    #
+    #4. currCreditOutsCount - done
+    #5. currCreditOutsValue - done
+    
+    
+    df1 = creditTranData[creditTranData['status']!="Cleared"]
+    aggs = {'currCreditOutsCount':'count', 'currCreditOutsValue':'sum'}
+    currCrOuts = df1.groupby('bid', as_index=False).amount.agg(aggs)
+    currCrOuts.head()
+    #
+    #6. creditEverBouncedCount
+    #7. creditEverBouncedValue
+    
+    df1 = creditTranData[creditTranData['ever_bounced']!="Yes"]
+    aggs = {'creditEverBouncedCount':'count', 'creditEverBouncedValue':'sum'}
+    everCrBounce = df1.groupby('bid', as_index=False).amount.agg(aggs)
+    everCrBounce.head()
+    
+    
+    
+    #%%
+    #8. creditAvgRepayDays
+    #9. creditAvgRepayAttempts
+    #10. creditEverUseCount
+    #11. creditEverUseValue
+    
+    aggs = {
+            'amount': {
+                    'creditEverUseCount':'count',
+                    'creditEverUseValue':'sum'},
+            'repayDays':{'creditAvgRepayDays':'mean'},
+            'repayAttempts':{'creditAvgRepayAttempts':'mean'}
+            }
+    
+    crOverallUse = grpCrTrnsData.agg(aggs)
+    crOverallUse.head()
+    
+    #%% bring together
+    creditData = pd.merge(custList,currCrOuts, on="bid",how="left")
+    creditData = pd.merge(creditData,everCrBounce, on="bid",how="left")
+    creditData = pd.merge(creditData,crOverallUse, on="bid",how="left")
+    
+    #%%
+    #rename
+    creditData.rename(columns={('amount', 'creditEverUseCount'):'creditEverUseCount'},inplace=True)
+    creditData.rename(columns={('amount', 'creditEverUseValue'):'creditEverUseValue'},inplace=True)
+    creditData.rename(columns={('repayDays', 'creditAvgRepayDays'):'creditAvgRepayDays'},inplace=True)
+    creditData.rename(columns={('repayAttempts', 'creditAvgRepayAttempts'):'creditAvgRepayAttempts'},inplace=True)
+
+    return creditData
+
+

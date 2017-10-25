@@ -45,6 +45,7 @@ def getDataFromRedshift(query,rs_user,rs_password):
     engine = create_engine(engine_str)
     print("Connected to Redshift. Fetching data ...")
     data_frame = pd.read_sql_query(query, engine)
+    print("Received Data")
     return data_frame
     
 
@@ -61,5 +62,11 @@ def getUserCredentials():
     return credentials
 
 
-
+def ensureNum(a):
+    import re
+    
+    x = str(a)
+    x = re.sub('\D','',x)
+    x = re.sub('^','0',x)
+    return int(x)
 

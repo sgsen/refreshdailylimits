@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #%%
-def get_customerdata():
+def get_customerdata(rs_user_id,rs_password):
     import jthelperfunctions as jthf
     
     query='''
@@ -39,8 +39,7 @@ def get_customerdata():
     case when o.order_value=0 then 0 else fmcg_sales*1.00/o.order_value end as fmcg_share 
     from customer_details c left join order_details o on o.businessid=c.custbid
     '''
-    credentials=jthf.getUserCredentials()
-    customerData=jthf.getDataFromRedshift(query,credentials.get('rs_user_id'),credentials.get('rs_password'))
+    customerData=jthf.getDataFromRedshift(query,rs_user_id,rs_password)
     return customerData
 
 #%%
@@ -83,26 +82,17 @@ def chequeCalcs_helper(row, transdf):
 #history
 #everbounced_count, everbounced_value, repaychequebounce_attempts
 #total cheques paid count, total cheques paid value, 
-def get_jtchequedata():
+def get_jtchequedata(custList,googlesecretkey_location):
     import jthelperfunctions as jthf
     import numpy as np
-    import pandas as pd
     import re           
 
-    credentials=jthf.getUserCredentials()
-    
-    #all bids
-    custdata = get_customerdata()
-    custList = custdata.iloc[:,0:1]
-    custList.rename(index=str, columns={'custbid':'bid'}, inplace=True)
-    
     #get tranasactions
-    chequeTransData = jthf.getGsheet("Cheque Payment & Exposure Tracker", "Master Data", 
-                                     credentials.get('googlesecretkey_location'))
-    del credentials
+    print("Getting transactions data from google sheets")
+    chequeTransData = jthf.getGsheet("Cheque Payment & Exposure Tracker", "Master Data", googlesecretkey_location)
     
     # choose the columns that are required for analysis
-    
+    print("Using the info to get cheque data in the desired format")
     selectCols = ['Date', 'BID', 'Amount', 'Final Status', 'Bounce Reason',
            'Replacement Days']
     chequeTransData = chequeTransData[selectCols]
@@ -137,6 +127,7 @@ def get_jtchequedata():
     #
     chequeData = custList.apply(chequeCalcs_helper, args=(chequeTransData,), axis=1)
     #chequeData.head()
+    print("Cheque Data Ready!")
     return chequeData
 
     
@@ -155,19 +146,17 @@ def get_jtchequedata():
 #11. creditEverUseValue - done
    
 
-def get_creditdata():
+def get_creditdata(custList,googlesecretkey_location):
     import jthelperfunctions as jthf
-    import numpy as np
     import pandas as pd
 
     #1. creditProduct - done
     #2. creditTransactionLimit - done
     #3. creditOverallLimit - done
-    credentials=jthf.getUserCredentials()
-    cdata = get_customerdata()
     
-    #
-    creditCustData = jthf.getGsheet("customer_credit_details","Sheet1",credentials.get('googlesecretkey_location'))
+    #Get Credit Details
+    print("Getting Credit details for customers")
+    creditCustData = jthf.getGsheet("customer_credit_details","Sheet1",googlesecretkey_location)
     
     creditCustData = creditCustData[creditCustData['Status'] == "ACTIVE"]
     creditCustData = creditCustData[['businessid', 'transactional_limit', 'overall_limit', 'product']]
@@ -176,13 +165,13 @@ def get_creditdata():
                                    'overall_limit':'creditOverallLimit', 'product':'creditProduct'},
                                    inplace=True)
     # merge creditCustData with custList
-    custList = cdata.iloc[:,0:1]
-    custList.rename(index=str, columns={'custbid':'bid'}, inplace=True)
     custList=pd.merge(custList, creditCustData, on='bid', how='left')
     
     #
-    creditTranData = jthf.getGsheet("[INTERNAL] FundsCorner <> Jumbotail | Collection Tracker", "Final Sheet", credentials.get('googlesecretkey_location'))
+    print("Connecting to [INTERNAL] FundsCorner <> Jumbotail | Collection Tracker")
+    creditTranData = jthf.getGsheet("[INTERNAL] FundsCorner <> Jumbotail | Collection Tracker", "Final Sheet", googlesecretkey_location)
     #%credit transaction data, which columsn reqd for 
+    print("Getting the data in the required shape and form")
     selCols = ['cust_id', 'net_collection_amount', 'JT_confirmed_cleared',
                'ever_bounced', 'days_to_repay', 'collection_attempts']
     
@@ -253,7 +242,7 @@ def get_creditdata():
     creditData.rename(columns={('amount', 'creditEverUseValue'):'creditEverUseValue'},inplace=True)
     creditData.rename(columns={('repayDays', 'creditAvgRepayDays'):'creditAvgRepayDays'},inplace=True)
     creditData.rename(columns={('repayAttempts', 'creditAvgRepayAttempts'):'creditAvgRepayAttempts'},inplace=True)
-
+    print("Credit Data is ready")
     return creditData
 
 

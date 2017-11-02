@@ -3,7 +3,7 @@
 def getGsheet(spreadsheetname, worksheetname, secretkeylocation):
     import pygsheets
     
-    gc = pygsheets.authorize(outh_file=secretkeylocation)
+    gc = pygsheets.authorize(outh_file=secretkeylocation,no_cache=True)
     
     # Open spreadsheet and then workseet
     sh = gc.open(spreadsheetname)
@@ -14,25 +14,11 @@ def getGsheet(spreadsheetname, worksheetname, secretkeylocation):
 def writeGsheet(dataframe, cellstart, spreadsheetname, worksheetname, secretkeylocation):
     import pygsheets
     
-    gc = pygsheets.authorize(outh_file=secretkeylocation)
+    gc = pygsheets.authorize(outh_file=secretkeylocation,no_cache=True)
     sh = gc.open(spreadsheetname)
     wks = sh.worksheet_by_title(worksheetname)
     wks.set_dataframe(dataframe, start = cellstart, fit = True)
 
-
-# get file from AWS
-#def getDataFromRedshift(query,rs_user_id,rs_password):
-#    print("Trying to fetch data from Redshift")
-#    import psycopg2
-#    con=psycopg2.connect(dbname= 'datawarehousedb', host='datawarehouse-cluster.cgatqp75ezrh.ap-southeast-1.redshift.amazonaws.com', 
-#    port= '5439', user= rs_user_id, password= rs_password)
-#    cur = con.cursor()
-#    print("Connected to Redshift")
-#    cur.execute(query)
-#    data_frame=cur.fetchall()
-#    cur.close()
-#    con.close()
-#    return data_frame
 
 def getDataFromRedshift(query,rs_user,rs_password):
     print("Trying to fetch data from Redshift")

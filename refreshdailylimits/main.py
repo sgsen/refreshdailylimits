@@ -58,7 +58,7 @@ def maxChequeAmountToday(row):
         return 10000
     
 creditData=pd.DataFrame(credit_data[['bid','currCreditOutsCount']])
-chequeData=pd.DataFrame(credit_data[['bid','currBouncedCount']])
+chequeData=pd.DataFrame(cheque_data[['bid','currBouncedCount']])
 finalData=pd.DataFrame(cust_data[['bid','storename','exceptions','order_dates']])
 finalData=finalData.merge(creditData, how='inner', on='bid')
 finalData=finalData.merge(chequeData, how='inner', on='bid')

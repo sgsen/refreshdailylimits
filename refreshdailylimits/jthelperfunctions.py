@@ -13,12 +13,25 @@ def getGsheet(spreadsheetname, worksheetname, secretkeylocation):
 
 def writeGsheet(dataframe, cellstart, spreadsheetname, worksheetname, secretkeylocation):
     import pygsheets
-    
+    r = dataframe.shape[0] + 2
+    c = dataframe.shape[1] + 1
+    print("Authenticating...")
     gc = pygsheets.authorize(outh_file=secretkeylocation,no_cache=True)
-    sh = gc.open(spreadsheetname)
-    wks = sh.worksheet_by_title(worksheetname)
+    
+    try:
+        sh = gc.open(spreadsheetname)
+    except:
+        print("Spreadsheet Not Found. Creating...")
+        sh = gc.create(spreadsheetname)
+    
+    try:    
+        wks = sh.worksheet_by_title(worksheetname)
+    except:
+        print("Worksheet Not Found. Creating...")
+        wks = sh.add_worksheet(worksheetname, rows = r, cols = c)
+    
     wks.set_dataframe(dataframe, start = cellstart, fit = True)
-
+    return sh
 
 def getDataFromRedshift(query,rs_user,rs_password):
     print("Trying to fetch data from Redshift")

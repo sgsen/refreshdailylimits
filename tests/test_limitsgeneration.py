@@ -33,23 +33,33 @@ print("Fetching credit data")
 credit_data=jtdf.get_creditdata(custList,googlesecretkey_location)
 
 #%%
-print("Fetching credit customers data")
-credit_cust = jtdf.get_CreditCustomers(googlesecretkey_location)
-
+print('Refresh Limits...')
+#refreshedData = jtlf.refreshLimits(cust_data, custList, cheque_data, credit_data)
+#merge data sets
+finalData = cust_data[['bid','storename','exceptions','order_dates', 'order_value','reattempt_pct']]
+finalData = finalData.merge(cheque_data, how='left', on='bid')
+finalData = finalData.merge(credit_data, how='left', on='bid')
+finalData.fillna(0,inplace=True)
 
 #%%
-print('Refreshing Limits...')
-refreshedData = jtlf.refreshLimits(cust_data, credit_cust, cheque_data, credit_data)
-
+finalData['totalBouncedOutstanding'] = finalData.apply(jtlf.totalBouncedOutstanding, axis=1)
 
 #%%
-print('Clean final file, Create views for SCM and CD, and write to GS')
-status = jtdf.publishLimits(refreshedData, googlesecretkey_location)
-print(status)
+finalData['deliver']=finalData.apply(jtlf.deliver, axis=1)
 
-#fixes
-#credit_product is going to zero when it's missing instead of none
-#done#credit_product is not factoring into takecredit()
-#redo get_jtchequedata() to be faster
-#figure out how to fix the 
-#max checque doesn't grandfather in older clients
+#%%
+finalData['takeCheque']=finalData.apply(jtlf.takeCheque, axis=1)
+
+#%%
+finalData['maxChequeAmountToday']=finalData.apply(jtlf.maxChequeAmountToday, axis=1)
+ 
+#%%
+finalData['takeCredit']=finalData.apply(jtlf.takeCredit, axis=1)
+  
+#%%
+finalData['credit_limit_today']=finalData.apply(jtlf.credit_limit_today, axis=1)
+
+
+
+
+

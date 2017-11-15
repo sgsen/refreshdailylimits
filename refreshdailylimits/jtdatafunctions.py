@@ -194,6 +194,13 @@ def get_creditdata(custList,googlesecretkey_location):
     
     #grpCrTrnsData.apply(lambda x: x[x['status']!="Cleared"]['amount'].sum())
     
+    # currCreditBouncedCount
+    # currCreditBouncedValue
+    df1 = creditTranData[creditTranData['status']=="Bounced"]
+    aggs = {'currCreditBouncedCount':'count', 'currCreditBouncedValue':'sum'}
+    currCrBounced = df1.groupby('bid', as_index=False).amount.agg(aggs)
+    currCrBounced.head()
+    
     #
     #4. currCreditOutsCount - done
     #5. currCreditOutsValue - done
@@ -207,7 +214,7 @@ def get_creditdata(custList,googlesecretkey_location):
     #6. creditEverBouncedCount
     #7. creditEverBouncedValue
     
-    df1 = creditTranData[creditTranData['ever_bounced']!="Yes"]
+    df1 = creditTranData[creditTranData['ever_bounced']=="Yes"]
     aggs = {'creditEverBouncedCount':'count', 'creditEverBouncedValue':'sum'}
     everCrBounce = df1.groupby('bid', as_index=False).amount.agg(aggs)
     everCrBounce.head()
@@ -220,29 +227,101 @@ def get_creditdata(custList,googlesecretkey_location):
     #10. creditEverUseCount
     #11. creditEverUseValue
     
-    aggs = {
-            'amount': {
-                    'creditEverUseCount':'count',
-                    'creditEverUseValue':'sum'},
-            'repayDays':{'creditAvgRepayDays':'mean'},
-            'repayAttempts':{'creditAvgRepayAttempts':'mean'}
-            }
+#    aggs = {
+#            'amount': {
+#                    'creditEverUseCount':'count',
+#                    'creditEverUseValue':'sum'},
+#            'repayDays':{'creditAvgRepayDays':'mean'},
+#            'repayAttempts':{'creditAvgRepayAttempts':'mean'}
+#            }
     
+    aggs = {'amount':['count','sum'],
+            'repayDays':'mean',
+            'repayAttempts':'mean'}
     crOverallUse = grpCrTrnsData.agg(aggs)
+    crOverallUse.columns = ["_".join(x) for x in crOverallUse.columns.ravel()]
+    crOverallUse.rename(columns={'bid_':'bid'}, inplace=True)
     crOverallUse.head()
     
     #%% bring together
-    creditData = pd.merge(custList,currCrOuts, on="bid",how="left")
+    creditData = pd.merge(custList,currCrBounced, on="bid",how="left")
+    creditData = pd.merge(creditData,currCrOuts, on="bid",how="left")
     creditData = pd.merge(creditData,everCrBounce, on="bid",how="left")
     creditData = pd.merge(creditData,crOverallUse, on="bid",how="left")
     
+    
     #%%
     #rename
-    creditData.rename(columns={('amount', 'creditEverUseCount'):'creditEverUseCount'},inplace=True)
-    creditData.rename(columns={('amount', 'creditEverUseValue'):'creditEverUseValue'},inplace=True)
-    creditData.rename(columns={('repayDays', 'creditAvgRepayDays'):'creditAvgRepayDays'},inplace=True)
-    creditData.rename(columns={('repayAttempts', 'creditAvgRepayAttempts'):'creditAvgRepayAttempts'},inplace=True)
+    creditData.rename(columns={'amount_count':'creditEverUseCount'},inplace=True)
+    creditData.rename(columns={'amount_sum':'creditEverUseValue'},inplace=True)
+    creditData.rename(columns={'repayDays_mean':'creditAvgRepayDays'},inplace=True)
+    creditData.rename(columns={'repayAttempts_mean':'creditAvgRepayAttempts'},inplace=True)
     print("Credit Data is ready")
     return creditData
 
+#%%
+def publishLimits(refreshedData, googlesecretkey_location):
+    import jthelperfunctions as jthf
+    import pandas as pd
+    #create view for CD
+    #dummy vars to match current structure
+    refreshedData['maxChequeAmountAccepted'] = refreshedData.maxChequeAmountToday
+    refreshedData['paidPenalty'] = "Not Yet Available"
+    refreshedData['overallCreditAvailable'] = "Remove"
+    refreshedData['oldBid'] = "Remove"
+    refreshedData['remainingtoclear'] = "Remove"
+    #%%
+    #select columns for CD View
+    cdCols=['bid', 'storename', 'exceptions', 'deliver', 'takeCheque', 
+            'maxChequeAmountToday', 'maxChequeAmountAccepted', 'currBouncedCount',
+            'currBouncedValue','everBouncedCount','everBouncedValue','paidPenalty',
+            'remainingtoclear','takeCredit', 'creditProduct','credit_limit_today',
+            'currCreditBouncedCount',
+            'currCreditOutsCount', 'currCreditOutsValue', 'overallCreditAvailable',
+            'creditTransactionLimit', 'creditOverallLimit', 'oldBid']
+    
+    cdView = refreshedData[cdCols]
+    
+    #%%
+    cdColNames = ['bid', 'storename', 'note', 'deliver', 'takecheck', 
+                  'maxcheckamountaccepted_today', 'maxcheckamountaccepted', 
+                  'bounced_check_outstanding', 'bounced_check_outstanding_amount', 
+                  'total_everbounced', 'cum_bounce_amount', 'hasclearedbounce', 
+                  'remainingtoclear', 'take_credit', 'credit_product', 
+                  'credit_limit_today', 'pdc_bounced_cheques', 
+                  'pdc_oustanding_count', 'pdc_oustanding_amount', 
+                  'overall_credit_limit_available', 'credit_transaction_limit', 
+                  'credit_overall_limit', 'oldbid']
+    
+    cdView.columns = cdColNames
+    
+    #%%
+    #set filename
+    #Check_Credit_Reference_Nov_11_2017
+    todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
+    tkrFileName="TEST_Check_Credit_Reference_"+todStr
+    print("Writing ", tkrFileName, " to Googlesheets...")
+    #write CD view to GS
+    cdGSheet = jthf.writeGsheet(cdView,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
+    #permission CD sheet and send
+    cdGSheet.share('sohamgsen@gmail.com', role='commenter')
+    #%%
+    
+    #create view for SCM
+    
+    #write SCM view to GS
+    
+    #permisison and send GS
 
+    writeStatus = "Successful"
+    return writeStatus
+
+#%%
+def get_CreditCustomers(googlesecretkey_location):
+    import jthelperfunctions as jthf
+    creditCustomers = jthf.getGsheet('customer_credit_details', 'Sheet1', googlesecretkey_location)
+    creditCustomers.rename(columns={'bid':'oldbid', 'businessid':'bid' }, inplace = True)
+    creditCustomers = creditCustomers[creditCustomers.Status == 'ACTIVE']   
+    creditCustomers = creditCustomers[['bid']] 
+    creditCustomers['creditActive'] = 'yes'
+    return creditCustomers

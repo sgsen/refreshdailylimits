@@ -18,9 +18,7 @@ def takeCheque(row):
     if row.exceptions =='WL' and row.creditActive!='yes':
         return 'yes'
     elif (row.exceptions=='BL' or row.deliver =='no' or totalEverBounced > 5 or 
-        (row.creditActive == 'yes' and 
-         (row.creditProduct == 'FundsCorner-PDC' or 
-          row.creditProduct == 'FundsCorner-CASH'))):
+        row.creditActive == 'yes' or row.reattempt_pct > 0.25):
         return 'no'
     else:
         return 'yes'
@@ -47,7 +45,8 @@ def takeCredit(rw):
         return 'no'
     elif rw.exceptions=='WL':
         return 'yes'
-    elif (rw.deliver == 'no' or rw.exceptions=='BL' or totalEverBounced > 5):
+    elif (rw.deliver == 'no' or rw.exceptions=='BL' or totalEverBounced > 5 or
+          rw.reattempt_pct > 0.25):
         return 'no'
     else:
         return 'yes'

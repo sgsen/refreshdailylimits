@@ -81,4 +81,7 @@ comparexy('takecheck')
 #%% Compare Take Credit
 comparexy('take_credit')
 
-#%% Compare Take 
+#%% output all data for testing
+todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
+tkrFileName2="TEST_Check_Credit_Reference_ALLDATA_"+todStr
+jthf.writeGsheet(refreshedData, 'A1',tkrFileName2,'Sheet1',googlesecretkey_location)

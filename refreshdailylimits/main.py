@@ -1,8 +1,11 @@
 import jtdatafunctions as jtdf
 import jthelperfunctions as jthf
 import jtlimitslogicfunctions as jtlf
-#import pandas as pd
+import pandas as pd
+
 #%%
+startTime = pd.Timestamp.now() 
+print('Running Limits Refresh', startTime, '...')
 #Fetching Credentials
 print("Fetching Credentials")
 credentials=jthf.getUserCredentials()
@@ -26,7 +29,8 @@ custList.rename(index=str, columns={'custbid':'bid'}, inplace=True)
 #%%
 #all bids for cheque and credit data
 print("Fetching cheque data")
-cheque_data=jtdf.get_jtchequedata(custList,googlesecretkey_location)
+#cheque_data=jtdf.get_jtchequedata(custList,googlesecretkey_location)
+cheque_data=jtdf.get_jtchequedata2(custList,googlesecretkey_location)
 
 #%%
 print("Fetching credit data")
@@ -45,7 +49,9 @@ refreshedData = jtlf.refreshLimits(cust_data, credit_cust, cheque_data, credit_d
 #%%
 print('Clean final file, Create views for SCM and CD, and write to GS')
 status = jtdf.publishLimits(refreshedData, googlesecretkey_location)
-print(status)
+endTime = pd.Timestamp.now()
+runTime = endTime - startTime
+print(status, endTime, 'Total Time:', runTime)
 
 #fixes
 #credit_product is going to zero when it's missing instead of none

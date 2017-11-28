@@ -19,18 +19,21 @@ def writeGsheet(dataframe, cellstart, spreadsheetname, worksheetname, secretkeyl
     gc = pygsheets.authorize(outh_file=secretkeylocation,no_cache=True)
     
     try:
+        print("Spreadsheet Found...")
         sh = gc.open(spreadsheetname)
     except:
         print("Spreadsheet Not Found. Creating...")
         sh = gc.create(spreadsheetname)
     
     try:    
+        print("Worksheet Found. Writing...")
         wks = sh.worksheet_by_title(worksheetname)
     except:
         print("Worksheet Not Found. Creating...")
         wks = sh.add_worksheet(worksheetname, rows = r, cols = c)
     
     wks.set_dataframe(dataframe, start = cellstart, fit = True)
+    print('Write Completed')
     return sh
 
 def getDataFromRedshift(query,rs_user,rs_password):

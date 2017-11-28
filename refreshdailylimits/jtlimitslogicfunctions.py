@@ -10,17 +10,31 @@ def deliver(row):
     else:
         return 'yes'
 
-# this is not right; missing the total bounce count barrier
+# if you can use pdc no cheque, max 5 bounces across products, blocked if
+# bounced cheque outstanding
+        
 def takeCheque(row):
     totalEverBounced = row.creditEverBouncedCount + row.everBouncedCount
-    if row['exceptions']=='BL' or row['deliver']=='no' or totalEverBounced > 5:
+    if row.exceptions =='WL' and row.creditActive!='yes':
+        return 'yes'
+    elif (row.exceptions=='BL' or row.deliver =='no' or totalEverBounced > 5 or 
+        (row.creditActive == 'yes' and 
+         (row.creditProduct == 'FundsCorner-PDC' or 
+          row.creditProduct == 'FundsCorner-CASH'))):
         return 'no'
     else:
         return 'yes'
 
 def maxChequeAmountToday(row):
+    import math
+    
     if row['takeCheque']=='no':
         return 0
+    elif row['grandpaMax'] > 30000:
+        #grandfather clause
+        gpaMax = row['grandpaMax']
+        gpaMax = math.ceil(gpaMax/1000)*1000
+        return (gpaMax)
     elif row['order_dates']>4:
         return 30000
     else:
@@ -29,13 +43,16 @@ def maxChequeAmountToday(row):
 #take_credit()
 def takeCredit(rw):
     totalEverBounced = rw.creditEverBouncedCount + rw.everBouncedCount
-    if (rw.takeCheque == 'no' or rw.exceptions=='BL' or totalEverBounced > 5 or 
-    rw.creditActive != 'yes'):
+    if rw.creditActive != 'yes':
+        return 'no'
+    elif rw.exceptions=='WL':
+        return 'yes'
+    elif (rw.deliver == 'no' or rw.exceptions=='BL' or totalEverBounced > 5):
         return 'no'
     else:
         return 'yes'
 
-
+#cash credit transaction limited to 
 #credit_limit_today()
 def credit_limit_today(rw):
     if rw.takeCredit == 'no':
@@ -45,6 +62,13 @@ def credit_limit_today(rw):
         if limit > rw.creditTransactionLimit:
             limit = rw.creditTransactionLimit
         return limit
+
+def limitCashCreditTrans(rw):
+    limit = rw.creditTransactionLimit
+    if (rw.creditProduct == 'FundsCorner-CASH'):
+        limit = 15000
+    return limit
+    
 
 #%%
 def refreshLimits(cust_data, credit_cust, credit_data, cheque_data):
@@ -59,6 +83,9 @@ def refreshLimits(cust_data, credit_cust, credit_data, cheque_data):
     
     finalData.fillna(0,inplace=True)
     
+    #%%
+    finalData['creditTransactionLimit'] = finalData.apply(limitCashCreditTrans, axis=1)
+   
     #%%
     finalData['totalBouncedOutstanding'] = finalData.apply(totalBouncedOutstanding, axis=1)
     

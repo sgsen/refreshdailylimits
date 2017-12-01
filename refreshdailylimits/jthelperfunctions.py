@@ -10,7 +10,7 @@ def getGsheet(spreadsheetname, worksheetname, secretkeylocation):
     wks = sh.worksheet_by_title(worksheetname)
     dataframe = wks.get_as_df()
     return dataframe
-
+#%%
 def writeGsheet(dataframe, cellstart, spreadsheetname, worksheetname, secretkeylocation):
     import pygsheets
     r = dataframe.shape[0] + 2
@@ -18,24 +18,28 @@ def writeGsheet(dataframe, cellstart, spreadsheetname, worksheetname, secretkeyl
     print("Authenticating...")
     gc = pygsheets.authorize(outh_file=secretkeylocation,no_cache=True)
     
+    spsheet_status = ''
+    wsheet_status = ''
     try:
-        print("Spreadsheet Found...")
         sh = gc.open(spreadsheetname)
+        spsheet_status = "Spreadsheet Found..."
     except:
-        print("Spreadsheet Not Found. Creating...")
         sh = gc.create(spreadsheetname)
+        spsheet_status = "Spreadsheet Not Found. Creating..."
+    print(spsheet_status)
     
     try:    
-        print("Worksheet Found. Writing...")
         wks = sh.worksheet_by_title(worksheetname)
+        wsheet_status = "Worksheet Found. Writing..."
     except:
-        print("Worksheet Not Found. Creating...")
         wks = sh.add_worksheet(worksheetname, rows = r, cols = c)
+        wsheet_status = "Worksheet Not Found. Creating..."
+    print(wsheet_status)
     
     wks.set_dataframe(dataframe, start = cellstart, fit = True)
     print('Write Completed')
     return sh
-
+#%%
 def getDataFromRedshift(query,rs_user,rs_password):
     print("Trying to fetch data from Redshift")
     from sqlalchemy import create_engine
@@ -50,7 +54,7 @@ def getDataFromRedshift(query,rs_user,rs_password):
     print("Received Data")
     return data_frame
     
-
+#%%
 def getUserCredentials():
     import json
     try:
@@ -63,7 +67,7 @@ def getUserCredentials():
         json.dump(credentials, open("__pycache__/credentials.txt",'w'))
     return credentials
 
-
+#%%
 def ensureNum(a):
     import re
     

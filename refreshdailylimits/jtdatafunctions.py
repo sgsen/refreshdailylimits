@@ -41,39 +41,51 @@ def get_customerdata(rs_user_id,rs_password):
     '''
     customerData=jthf.getDataFromRedshift(query,rs_user_id,rs_password)
     return customerData
-
 #%%
-def chequeCalcs_helper(row, transdf):
-    cust_trans = transdf[transdf['bid'] == row['bid']]
-    row['totalChequesCount'] = cust_trans.shape[0]
-    
-    if cust_trans.shape[0] > 0:
-        row['totalChequesValue'] = cust_trans.amount.sum()
-        
-        row['currOutsCount'] = cust_trans.finalstatus[cust_trans['finalstatus'] == "Collected"].count()
-        row['currOutsValue'] = cust_trans.amount[cust_trans['finalstatus'] == "Collected"].sum()
-        
-        row['currBouncedCount'] = cust_trans.finalstatus[cust_trans['finalstatus'] == "Bounced"].count()
-        row['currBouncedValue'] = cust_trans.amount[cust_trans['finalstatus'] == "Bounced"].sum()
-        
-        row['everBouncedCount'] = cust_trans['bouncereason'][cust_trans['bouncereason']!=""].count()
-        row['everBouncedValue'] = cust_trans['amount'][cust_trans['bouncereason']!=''].sum()
-        row['avgRepayTime'] = cust_trans.repldays.mean()
-    else:
-        row['totalChequesValue'] = 0
-            
-        row['currOutsCount'] = 0
-        row['currOutsValue'] = 0
-            
-        row['currBouncedCount'] = 0
-        row['currBouncedValue'] = 0
-            
-        row['everBouncedCount'] = 0
-        row['everBouncedValue'] = 0
-        row['avgRepayTime'] = 0
-        
-    return row
+def get_ordersDeliveryToday(rs_user_id,rs_password):
+    import jthelperfunctions as jthf
+    query ='''
+        SELECT c.businessid,
+        bs.displayname AS storename,
+        c.phonenumber,
+        CASE
+        WHEN ch.cheque_usage > 5 THEN TRUE
+        ELSE FALSE
+        END AS cheque_customer,
+        SUM((ord.quantity - ord.cancelled_units)*ord.order_item_amount / ord.quantity) AS order_value
+        FROM bolt_order_item_snapshot ord
+        JOIN customer_snapshot_ c ON ord.buyer_id = c.customerid
+        LEFT JOIN business_snapshot bs ON bs.businessid = c.businessid
+        LEFT JOIN promise_snapshot pr ON pr.promised_entity_id = ord.order_item_id
+        LEFT JOIN (SELECT store_id AS businessid,
+        COUNT(DISTINCT (CASE WHEN cheque IS NOT NULL THEN attempt_date END)) AS cheque_usage
+        FROM eod_store_level
+        GROUP BY 1) ch ON ch.businessid = c.businessid
+        WHERE
+        DATE (updated_promise_time) = CURRENT_DATE
+        --DATE (updated_promise_time) = CURRENT_DATE-1
+        AND   c.istestcustomer IS FALSE
+        AND   ord.buyer_id != 'JC-1202555246'
+        GROUP BY 1,
+        2,
+        3,
+        4 
+        '''
+    ordersDeliveryToday = jthf.getDataFromRedshift(query,rs_user_id,rs_password)
+    ordersDeliveryToday  = ordersDeliveryToday.iloc[:,[0,1,2,4]]
+    ordersDeliveryToday.rename(columns={'businessid':'bid'}, inplace=True)
+    return ordersDeliveryToday  
  
+#%%
+def get_CreditCustomers(googlesecretkey_location):
+    import jthelperfunctions as jthf
+    creditCustomers = jthf.getGsheet('customer_credit_details', 'Sheet1', googlesecretkey_location)
+    creditCustomers.rename(columns={'bid':'oldbid', 'businessid':'bid' }, inplace = True)
+    creditCustomers = creditCustomers[creditCustomers.Status == 'ACTIVE']   
+    creditCustomers = creditCustomers[['bid']] 
+    creditCustomers['creditActive'] = 'yes'
+    return creditCustomers    
+
 #%%
 #2. get_jtchequedata()
 #current 
@@ -82,71 +94,9 @@ def chequeCalcs_helper(row, transdf):
 #history
 #everbounced_count, everbounced_value, repaychequebounce_attempts
 #total cheques paid count, total cheques paid value, 
-def get_jtchequedata(custList,googlesecretkey_location):
-    import jthelperfunctions as jthf
-    import numpy as np
-    import re           
 
-    #get tranasactions
-    print("Getting transactions data from google sheets")
-    chequeTransData = jthf.getGsheet("Cheque Payment & Exposure Tracker", "Master Data", googlesecretkey_location)
-    
-    # choose the columns that are required for analysis
-    print("Using the info to get cheque data in the desired format")
-    selectCols = ['Date', 'BID', 'Amount', 'Final Status', 'Bounce Reason',
-           'Replacement Days']
-    chequeTransData = chequeTransData[selectCols]
-    del selectCols
-    #rename the variables to be easy to work with
-    chequeTransData.rename(index=str, 
-                           columns={'Date':'date', 'BID':'bid',
-                                    'Amount':'amount', 'Final Status':'finalstatus',
-                                    'Bounce Reason':'bouncereason', 'Replacement Days':
-                                        'repldays'}, inplace=True)
-    # deal with the mixed data types in amount column
-    #convert all to string
-    chequeTransData['amount'] = chequeTransData['amount'].apply(lambda x: str(x))
-    #get rid of commas
-    chequeTransData['amount'] = chequeTransData['amount'].str.replace(',','')
-    #get rid of the rows that have empty amount cols
-    chequeTransData = chequeTransData[chequeTransData['amount'] != '']
-    #convert all of these to float type
-    chequeTransData['amount'] = chequeTransData['amount'].astype(float)
 
-    # fix repldays to be an int
-    #chequeTransData['repldays']
-    
-    chequeTransData['repldays'] = chequeTransData['repldays'].apply(lambda x: str(x))
-    #chequeTransData['repldays']= chequeTransData['repldays'].str.replace(',','')
-    chequeTransData['repldays']= chequeTransData['repldays'].apply(lambda x: re.sub('s+','0',x))
-    chequeTransData['repldays'] = chequeTransData['repldays'].replace(np.NaN,'0')
-    chequeTransData['repldays'] = chequeTransData['repldays'].replace('','0')
-    chequeTransData['repldays']= chequeTransData['repldays'].str.strip('') 
-    chequeTransData['repldays']=chequeTransData['repldays'].apply(lambda x: int(x))
-
-    #
-    chequeData = custList.apply(chequeCalcs_helper, args=(chequeTransData,), axis=1)
-    #chequeData.head()
-    print("Cheque Data Ready!")
-    return chequeData
-
-    
-
-#
-#1. creditProduct - done
-#2. creditTransactionLimit - done
-#3. creditOverallLimit - done
-#4. currCreditOutsCount - done
-#5. currCreditOutsValue - done
-#6. creditEverBouncedCount - done
-#7. creditEverBouncedValue - done
-#8. creditAvgRepayDays - done
-#9. creditAvgRepayAttemps - done
-#10. creditEverUseCount - done
-#11. creditEverUseValue - done
-   
-
-def get_jtchequedata2(custList, googlesecretkey_location):
+def get_jtchequedata(custList, googlesecretkey_location):
     import jthelperfunctions as jthf
     import pandas as pd
     import re           
@@ -180,7 +130,6 @@ def get_jtchequedata2(custList, googlesecretkey_location):
     
     chequeTransData['date'] = pd.to_datetime(chequeTransData.date)
     
-    #%%
     brstrings = {
             'Insufficient Funds':'Insufficient Funds|[Ii]nsufficient',
             'Connectivity':'onnectivity',
@@ -233,7 +182,6 @@ def get_jtchequedata2(custList, googlesecretkey_location):
     custList = custList.merge(df1, on='bid', how='left')
     
     
-    #%%
     #currOutsCount
     #currOutsValue
     df1 = chequeTransData[chequeTransData.finalstatus == 'Collected']
@@ -243,7 +191,6 @@ def get_jtchequedata2(custList, googlesecretkey_location):
     custList = custList.merge(df1, on='bid', how='left')
     
     
-    #%%
     #currBouncedCount
     #currBouncedValue
     df1 = chequeTransData[(chequeTransData.finalstatus == 'Bounced') & (chequeTransData.custBounce == 1)]
@@ -252,7 +199,6 @@ def get_jtchequedata2(custList, googlesecretkey_location):
     df1.rename(columns={'finalstatus':'currBouncedCount', 'amount':'currBouncedValue'},inplace=True)
     custList = custList.merge(df1, on='bid', how='left')
     
-    #%%
     #everBouncedCount
     #everBouncedValue
     df1 = chequeTransData[chequeTransData.custBounce == 1]
@@ -261,7 +207,6 @@ def get_jtchequedata2(custList, googlesecretkey_location):
     df1.rename(columns={'finalstatus':'everBouncedCount', 'amount':'everBouncedValue'},inplace=True)
     custList = custList.merge(df1, on='bid', how='left')
     
-    #%%
     #maxChequeAccepted,#grandfather_max
     #we didn't have a max limit till April 7 at which point we dedided to
     #accept cheque limits beyond the 30000 per day from existing customers who had
@@ -272,14 +217,39 @@ def get_jtchequedata2(custList, googlesecretkey_location):
     df1.rename(columns={'amount':'grandpaMax'},inplace=True)
     custList = custList.merge(df1, on='bid', how='left')
     custList.fillna(0, inplace=True)
-    #%%
-    #chequeData.head()
+   
+#    #firstChequeDate and Bounce
+#    temp = chequeTransData.groupby('bid').date.min().to_frame('firstChequeDate')
+#    chequeTransData = chequeTransData.merge(temp, how='left', left_on='bid',right_index=True)
+#    def firstChequeBounce(rw):
+#        if ((rw.date == rw.firstChequeDate) and rw.custBounce==1):
+#            return 1
+#        else:
+#            return 0
+#    chequeTransData['firstBounce']=chequeTransData.apply(firstChequeBounce, axis=1)
+#    temp = chequeTransData.groupby('bid').firstBounce.agg(max).to_frame('bouncedFirstCheque')
+#    custList = custList.merge(temp, how='left', left_on='bid',right_index=True)
+#    #chequeData.head()
     print("Cheque Data Ready!")
     #return chequeData
 
     return custList
 
 
+
+#%%
+#1. creditProduct - done
+#2. creditTransactionLimit - done
+#3. creditOverallLimit - done
+#4. currCreditOutsCount - done
+#5. currCreditOutsValue - done
+#6. creditEverBouncedCount - done
+#7. creditEverBouncedValue - done
+#8. creditAvgRepayDays - done
+#9. creditAvgRepayAttemps - done
+#10. creditEverUseCount - done
+#11. creditEverUseValue - done
+   
 def get_creditdata(custList,googlesecretkey_location):
     import jthelperfunctions as jthf
     import pandas as pd
@@ -350,10 +320,6 @@ def get_creditdata(custList,googlesecretkey_location):
     aggs = {'creditEverBouncedCount':'count', 'creditEverBouncedValue':'sum'}
     everCrBounce = df1.groupby('bid', as_index=False).amount.agg(aggs)
     everCrBounce.head()
-    
-    
-    
-    #%%
     #8. creditAvgRepayDays
     #9. creditAvgRepayAttempts
     #10. creditEverUseCount
@@ -370,14 +336,11 @@ def get_creditdata(custList,googlesecretkey_location):
     crOverallUse.rename(columns={'bid_':'bid'}, inplace=True)
     crOverallUse.head()
     
-    #%% bring together
     creditData = pd.merge(custList,currCrBounced, on="bid",how="left")
     creditData = pd.merge(creditData,currCrOuts, on="bid",how="left")
     creditData = pd.merge(creditData,everCrBounce, on="bid",how="left")
     creditData = pd.merge(creditData,crOverallUse, on="bid",how="left")
     
-    
-    #%%
     #rename
     creditData.rename(columns={'amount_count':'creditEverUseCount'},inplace=True)
     creditData.rename(columns={'amount_sum':'creditEverUseValue'},inplace=True)
@@ -387,7 +350,7 @@ def get_creditdata(custList,googlesecretkey_location):
     return creditData
 
 #%%
-def publishLimits(refreshedData, googlesecretkey_location):
+def publishLimits(refreshedData, callExceedLimits, googlesecretkey_location):
     import jthelperfunctions as jthf
     import pandas as pd
     #create view for CD
@@ -427,29 +390,94 @@ def publishLimits(refreshedData, googlesecretkey_location):
     #set filename
     #Check_Credit_Reference_Nov_11_2017
     todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
-    tkrFileName="TEST_Check_Credit_Reference_"+todStr
+    tkrFileName="Check_Credit_Reference_"+todStr
     print("Writing ", tkrFileName, " to Googlesheets...")
     #write CD view to GS
     cdGSheet = jthf.writeGsheet(cdView,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
     #permission CD sheet and send
-    cdGSheet.share('sohamgsen@gmail.com', role='commenter')
+    cdGSheet.share('customerdelight@jumbotail.com', role='reader', is_group=True)
+    #%%    #create view for SCM, mapping from refreshedData
+    scmViewCols = [
+            'BusinessId',
+            'Business Name',
+            'chequeProfileId',
+            'creditProfileId',
+            'eligibleForCheque',
+            'currentChequeLimit',
+            'maxChequeLimit',
+            'outstandingBouncedCheques',
+            'outstandingBouncedChequesAmount',
+            'totalBouncedCheques',
+            'eligibleForCredit',
+            'creditProvider',
+            'currentCreditLimit',
+            'totalCreditLimit',
+            'creditTransactionLimit',
+            'bouncedPDC',
+            'outstandingPDC',
+            'outstandingPDCAmount',
+            'cheque_createdTime',
+            'cheque_lastUpdatedTime',
+            'cheque_lastUpdatedBy',
+            'credit_createdTime',
+            'credit_lastUpdatedTime',
+            'credit_lastUpdatedBy'] 
+    
+    scmView=pd.DataFrame(columns=scmViewCols, index=refreshedData.index)
     #%%
+    scmView.loc[:,'BusinessId']=refreshedData.bid
+    scmView.loc[:,'Business Name']=refreshedData.storename
+    scmView.loc[:,'chequeProfileId']=''
+    scmView.loc[:,'creditProfileId']=''
+    scmView.loc[:,'eligibleForCheque']=refreshedData.takeCheque
+    scmView.loc[:,'currentChequeLimit']=refreshedData.maxChequeAmountToday
+    scmView.loc[:,'maxChequeLimit']=refreshedData.maxChequeAmountAccepted
+    scmView.loc[:,'outstandingBouncedCheques']=refreshedData.currOutsCount
+    scmView.loc[:,'outstandingBouncedChequesAmount']=refreshedData.currOutsValue
+    scmView.loc[:,'totalBouncedCheques']=refreshedData.everBouncedCount
+    scmView.loc[:,'eligibleForCredit']=refreshedData.takeCredit
+    scmView.loc[:,'creditProvider']=refreshedData.creditProduct
+    scmView.loc[:,'currentCreditLimit']=refreshedData.credit_limit_today
+    scmView.loc[:,'totalCreditLimit']=refreshedData.creditOverallLimit
+    scmView.loc[:,'creditTransactionLimit']=refreshedData.creditTransactionLimit
+    scmView.loc[:,'bouncedPDC']=refreshedData.currCreditBouncedCount
+    scmView.loc[:,'outstandingPDC']=refreshedData.currCreditOutsCount
+    scmView.loc[:,'outstandingPDCAmount']=refreshedData.currCreditOutsValue
+    scmView.loc[:,'cheque_createdTime']=''
+    scmView.loc[:,'cheque_lastUpdatedTime']=''
+    scmView.loc[:,'cheque_lastUpdatedBy']=''
+    scmView.loc[:,'credit_createdTime']=''
+    scmView.loc[:,'credit_lastUpdatedTime']=''
+    scmView.loc[:,'credit_lastUpdatedBy']=''    
+#%% convert yes/no to TRUE/FALSE and product types
+    scmView.eligibleForCheque = scmView.eligibleForCheque.str.replace('yes','TRUE') 
+    scmView.eligibleForCheque = scmView.eligibleForCheque.str.replace('no','FALSE')
     
-    #create view for SCM
+    scmView.eligibleForCredit = scmView.eligibleForCredit.str.replace('yes','TRUE') 
+    scmView.eligibleForCredit = scmView.eligibleForCredit.str.replace('no','FALSE')
     
-    #write SCM view to GS
+    scmView.creditProvider = scmView.creditProvider.astype(str)
+    scmView.creditProvider = scmView.creditProvider.str.replace('FundsCorner-CASH','FUNDSCORNER_CASH')
+    scmView.creditProvider = scmView.creditProvider.str.replace('FundsCorner-PDC','FUNDSCORNER_PDC')
+    scmView.creditProvider = scmView.creditProvider.str.replace('0','NO_CREDIT')
     
-    #permisison and send GS
+#%%    #write SCM view to GS
+    tkrFileName="Check_Credit_Reference_SCM_"+todStr
+    print("Writing ", tkrFileName, " to Googlesheets...")
+    scmGSheet = jthf.writeGsheet(scmView,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
+    #permission send
+    scmGSheet.share('rahul.kumar@jumbotail.com', role='reader')
+#%%
+    #write permisison and send GS for exceed Calls
+    #callExceedLimits
+    tkrFileName="ChequeCreditLimitCalls_"+todStr
+    print("Writing ", tkrFileName, " to Googlesheets...")
+    exceededGSheet = jthf.writeGsheet(callExceedLimits,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
+    #permission send
+    exceededGSheet.share('customerdelight@jumbotail.com', role='writer', is_group=True)
+   
 
+#%%
     writeStatus = "Successful"
     return writeStatus
 
-#%%
-def get_CreditCustomers(googlesecretkey_location):
-    import jthelperfunctions as jthf
-    creditCustomers = jthf.getGsheet('customer_credit_details', 'Sheet1', googlesecretkey_location)
-    creditCustomers.rename(columns={'bid':'oldbid', 'businessid':'bid' }, inplace = True)
-    creditCustomers = creditCustomers[creditCustomers.Status == 'ACTIVE']   
-    creditCustomers = creditCustomers[['bid']] 
-    creditCustomers['creditActive'] = 'yes'
-    return creditCustomers

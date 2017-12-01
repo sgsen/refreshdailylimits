@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+# sgsen@jumbotail.com, puja@jumbotail.com
 import jtdatafunctions as jtdf
 import jthelperfunctions as jthf
 import jtlimitslogicfunctions as jtlf
@@ -29,8 +31,7 @@ custList.rename(index=str, columns={'custbid':'bid'}, inplace=True)
 #%%
 #all bids for cheque and credit data
 print("Fetching cheque data")
-#cheque_data=jtdf.get_jtchequedata(custList,googlesecretkey_location)
-cheque_data=jtdf.get_jtchequedata2(custList,googlesecretkey_location)
+cheque_data=jtdf.get_jtchequedata(custList,googlesecretkey_location)
 
 #%%
 print("Fetching credit data")
@@ -40,22 +41,27 @@ credit_data=jtdf.get_creditdata(custList,googlesecretkey_location)
 print("Fetching credit customers data")
 credit_cust = jtdf.get_CreditCustomers(googlesecretkey_location)
 
-
 #%%
 print('Refreshing Limits...')
 refreshedData = jtlf.refreshLimits(cust_data, credit_cust, cheque_data, credit_data)
 
+#%%
+print('Fetching orders to be delivered today...')
+deliveriesToday = jtdf.get_ordersDeliveryToday(rs_user_id,rs_password)
+
+#%%
+print('Identifying Customers Who Will Exceed Cheque or Credit Limits Today...')
+callExceededLimits = jtlf.idExceedLimits(refreshedData, deliveriesToday)
 
 #%%
 print('Clean final file, Create views for SCM and CD, and write to GS')
-status = jtdf.publishLimits(refreshedData, googlesecretkey_location)
+status = jtdf.publishLimits(refreshedData, callExceededLimits, googlesecretkey_location)
 endTime = pd.Timestamp.now()
 runTime = endTime - startTime
 print(status, endTime, 'Total Time:', runTime)
 
-#fixes
-#credit_product is going to zero when it's missing instead of none
-#done#credit_product is not factoring into takecredit()
-#redo get_jtchequedata() to be faster
-#figure out how to fix the 
-#max checque doesn't grandfather in older clients
+#%% test_purposes 
+#uploads the total dataset used to generate limits to GS
+#todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
+#tkrFileName2="TEST_Check_Credit_Reference_ALLDATA_"+todStr
+#jthf.writeGsheet(refreshedData, 'A1',tkrFileName2,'Sheet1',googlesecretkey_location)

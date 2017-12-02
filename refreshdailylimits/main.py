@@ -62,6 +62,12 @@ print(status, endTime, 'Total Time:', runTime)
 
 #%% test_purposes 
 #uploads the total dataset used to generate limits to GS
+todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
+tkrFileName2="TEST_Check_Credit_Reference_ALLDATA_"+todStr
+jthf.writeGsheet(refreshedData, 'A1',tkrFileName2,'Sheet1',googlesecretkey_location)
+
+#%% test_purposes 
+##uploads the total dataset used to generate limits to GS
 #todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
-#tkrFileName2="TEST_Check_Credit_Reference_ALLDATA_"+todStr
-#jthf.writeGsheet(refreshedData, 'A1',tkrFileName2,'Sheet1',googlesecretkey_location)
+#tkrFileName2="ChequeCreditLimitCalls_"+todStr
+#jthf.writeGsheet(callExceededLimits, 'A1',tkrFileName2,'Sheet1',googlesecretkey_location)

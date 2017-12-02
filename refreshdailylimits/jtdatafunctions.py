@@ -353,6 +353,17 @@ def get_creditdata(custList,googlesecretkey_location):
 def publishLimits(refreshedData, callExceedLimits, googlesecretkey_location):
     import jthelperfunctions as jthf
     import pandas as pd
+    
+    todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
+    #%%
+    #write permisison and send GS for exceed Calls
+    #callExceedLimits
+    tkrFileName="ChequeCreditLimitCalls_"+todStr
+    print("Writing ", tkrFileName, " to Googlesheets...")
+    exceededGSheet = jthf.writeGsheet(callExceedLimits,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
+    #permission send
+    exceededGSheet.share('customerdelight@jumbotail.com', role='writer', is_group=True)
+#%%
     #create view for CD
     #dummy vars to match current structure
     refreshedData['maxChequeAmountAccepted'] = refreshedData.maxChequeAmountToday
@@ -389,7 +400,6 @@ def publishLimits(refreshedData, callExceedLimits, googlesecretkey_location):
     #%%
     #set filename
     #Check_Credit_Reference_Nov_11_2017
-    todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
     tkrFileName="Check_Credit_Reference_"+todStr
     print("Writing ", tkrFileName, " to Googlesheets...")
     #write CD view to GS
@@ -467,14 +477,6 @@ def publishLimits(refreshedData, callExceedLimits, googlesecretkey_location):
     scmGSheet = jthf.writeGsheet(scmView,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
     #permission send
     scmGSheet.share('rahul.kumar@jumbotail.com', role='reader')
-#%%
-    #write permisison and send GS for exceed Calls
-    #callExceedLimits
-    tkrFileName="ChequeCreditLimitCalls_"+todStr
-    print("Writing ", tkrFileName, " to Googlesheets...")
-    exceededGSheet = jthf.writeGsheet(callExceedLimits,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
-    #permission send
-    exceededGSheet.share('customerdelight@jumbotail.com', role='writer', is_group=True)
    
 
 #%%

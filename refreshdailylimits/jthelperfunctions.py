@@ -3,7 +3,7 @@
 def getGsheet(spreadsheetname, worksheetname, secretkeylocation):
     import pygsheets
     
-    gc = pygsheets.authorize(outh_file=secretkeylocation,no_cache=True)
+    gc = pygsheets.authorize(outh_file=secretkeylocation,no_cache=True, retries=3)
     
     # Open spreadsheet and then workseet
     sh = gc.open(spreadsheetname)
@@ -16,28 +16,38 @@ def writeGsheet(dataframe, cellstart, spreadsheetname, worksheetname, secretkeyl
     r = dataframe.shape[0] + 2
     c = dataframe.shape[1] + 1
     print("Authenticating...")
-    gc = pygsheets.authorize(outh_file=secretkeylocation,no_cache=True)
+    gc = pygsheets.authorize(outh_file=secretkeylocation,no_cache=True, retries=3)
     
     spsheet_status = ''
     wsheet_status = ''
+    write_status =''
     try:
         sh = gc.open(spreadsheetname)
         spsheet_status = "Spreadsheet Found..."
-    except:
+    except pygsheets.RequestError:
+        spsheet_status = "Spreadsheet Request Error. Skip writing "+spreadsheetname+"..."
+    except pygsheets.SpreadsheetNotFound:
         sh = gc.create(spreadsheetname)
         spsheet_status = "Spreadsheet Not Found. Creating..."
+    except:
+        spsheet_status = "Some error besides request and file not found. Skip writing "+spreadsheetname+"..."
     print(spsheet_status)
     
     try:    
         wks = sh.worksheet_by_title(worksheetname)
         wsheet_status = "Worksheet Found. Writing..."
-    except:
+        wks.set_dataframe(dataframe, start = cellstart, fit = True)
+        write_status='Write Completed'
+    except pygsheets.WorksheetNotFound:
         wks = sh.add_worksheet(worksheetname, rows = r, cols = c)
-        wsheet_status = "Worksheet Not Found. Creating..."
-    print(wsheet_status)
+        wsheet_status = "Worksheet Not Found. Creating and Writing..."
+        wks.set_dataframe(dataframe, start = cellstart, fit = True)
+        write_status='Write Completed'
+    except:
+        wsheet_status = "Some error besides sheet not found. Skip writing "+worksheetname+"..."
+        write_status='Write Failed'
     
-    wks.set_dataframe(dataframe, start = cellstart, fit = True)
-    print('Write Completed')
+    print(wsheet_status, write_status)
     return sh
 #%%
 def getDataFromRedshift(query,rs_user,rs_password):

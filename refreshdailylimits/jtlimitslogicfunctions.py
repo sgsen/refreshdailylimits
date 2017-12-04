@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# sgsen@jumbotail.com, puja@jumbotail.com
 #%%
 def totalBouncedOutstanding(row):
     total = row.currBouncedCount + row.currCreditBouncedCount

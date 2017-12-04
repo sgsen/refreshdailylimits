@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# sgsen@jumbotail.com, puja@jumbotail.com
 def getGsheet(spreadsheetname, worksheetname, secretkeylocation):
     import pygsheets
     

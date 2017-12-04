@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # sgsen@jumbotail.com, puja@jumbotail.com
-import jtdatafunctions as jtdf
-import jthelperfunctions as jthf
-import jtlimitslogicfunctions as jtlf
+import refreshdailylimits.jtdatafunctions as jtdf
+import refreshdailylimits.jthelperfunctions as jthf
+import refreshdailylimits.jtlimitslogicfunctions as jtlf
 import pandas as pd
 
 #%%
@@ -57,7 +57,7 @@ callExceededLimits = jtlf.idExceedLimits(refreshedData, deliveriesToday)
 print('Clean final file, Create views for SCM and CD, and write to GS')
 #status = jtdf.publishLimits(refreshedData, callExceededLimits, googlesecretkey_location)
 
-status = jtdf.publishLimits(refreshedData, callExceededLimits, googlesecretkey_location)
+status = jtdf.publishLimitsTest(refreshedData, callExceededLimits, googlesecretkey_location)
 
 #%%
 endTime = pd.Timestamp.now()
@@ -65,13 +65,8 @@ runTime = endTime - startTime
 print(status, endTime, 'Total Time:', runTime)
 
 #%% test_purposes 
-##uploads the total dataset used to generate limits to GS
-#todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
-#tkrFileName2="TEST_Check_Credit_Reference_ALLDATA_"+todStr
-#jthf.writeGsheet(refreshedData, 'A1',tkrFileName2,'Sheet1',googlesecretkey_location)
+#uploads the total dataset used to generate limits to GS
+todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
+tkrFileName2="TEST_Check_Credit_Reference_ALLDATA_"+todStr
+jthf.writeGsheet(refreshedData, 'A1',tkrFileName2,'Sheet1',googlesecretkey_location)
 
-#%% test_purposes 
-##uploads the total dataset used to generate limits to GS
-#todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
-#tkrFileName2="ChequeCreditLimitCalls_"+todStr
-#jthf.writeGsheet(callExceededLimits, 'A1',tkrFileName2,'Sheet1',googlesecretkey_location)

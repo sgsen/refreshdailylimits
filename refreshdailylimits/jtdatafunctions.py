@@ -367,35 +367,70 @@ def publishLimits(refreshedData, callExceedLimits, googlesecretkey_location):
     #create view for CD
     #dummy vars to match current structure
     refreshedData['maxChequeAmountAccepted'] = refreshedData.maxChequeAmountToday
-    refreshedData['paidPenalty'] = "Removed"
-    refreshedData['everBouncedValue'] = "Removed"
-    refreshedData['oldBid'] = "Removed"
-    refreshedData['remainingtoclear'] = "Removed"
-    refreshedData['overallCreditAvailable'] = "Removed"
+    refreshedData['paidPenalty'] = "NoPenaltyData"
+    #refreshedData['everBouncedValue'] = "Removed"
+    #refreshedData['oldBid'] = "Removed"
+    #refreshedData['remainingtoclear'] = "Removed"
+    #refreshedData['overallCreditAvailable'] = "Removed"
     #%%
     #select columns for CD View
-    cdCols=['bid', 'storename', 'exceptions', 'deliver', 'takeCheque', 
-            'maxChequeAmountToday', 'maxChequeAmountAccepted', 'currBouncedCount',
-            'currBouncedValue','everBouncedCount','everBouncedValue','paidPenalty',
-            'remainingtoclear','takeCredit', 'creditProduct','credit_limit_today',
+    cdCols=['bid', 
+            'storename', 
+            'exceptions', 
+            'deliver', 
+            'takeCheque', 
+            'maxChequeAmountToday', 
+            'maxChequeAmountAccepted', 
+            'currBouncedCount',
+            'currBouncedValue',
+            'paidPenalty',
+            'totalChequesEver',
+            'totalChequesValue',
+            'everBouncedCount',
+            'everBouncedValue',
+            'takeCredit', 
+            'creditProduct',
+            'credit_limit_today',
             'currCreditBouncedCount',
-            'currCreditOutsCount', 'currCreditOutsValue', 'overallCreditAvailable',
-            'creditTransactionLimit', 'creditOverallLimit', 'oldBid']
+            'currCreditBouncedValue',
+            'currCreditOutsCount', 
+            'currCreditOutsValue',
+            'creditTransactionLimit', 
+            'creditOverallLimit',
+            'creditEverBouncedCount',
+            'creditEverBouncedValue',
+            'creditEverUseCount', 
+            'creditEverUseValue']
     
     cdView = refreshedData[cdCols]
     
     #%%
-    cdColNames = ['bid', 'storename', 'note', 'deliver', 'takecheck', 
-                  'maxcheckamountaccepted_today', 'maxcheckamountaccepted', 
-                  'bounced_check_outstanding', 'bounced_check_outstanding_amount', 
-                  'total_everbounced', 'cum_bounce_amount', 'hasclearedbounce', 
-                  'remainingtoclear', 'take_credit', 'credit_product', 
-                  'credit_limit_today', 'pdc_bounced_cheques', 
-                  'pdc_oustanding_count', 'pdc_oustanding_amount', 
-                  'overall_credit_limit_available', 'credit_transaction_limit', 
-                  'credit_overall_limit', 'oldbid']
-    
-    cdView.columns = cdColNames
+    #cols for the old appsheets app
+#    cdColNames = ['bid', 
+#                  'storename', 
+#                  'note', 
+#                  'deliver', 
+#                  'takecheck', 
+#                  'maxcheckamountaccepted_today', 
+#                  'maxcheckamountaccepted', 
+#                  'bounced_check_outstanding', 
+#                  'bounced_check_outstanding_amount', 
+#                  'total_everbounced', 
+#                  'cum_bounce_amount', 
+#                  'hasclearedbounce', 
+#                  'remainingtoclear', 
+#                  'take_credit', 
+#                  'credit_product', 
+#                  'credit_limit_today', 
+#                  'pdc_bounced_cheques', 
+#                  'pdc_oustanding_count', 
+#                  'pdc_oustanding_amount', 
+#                  'overall_credit_limit_available',
+#                  'credit_transaction_limit', 
+#                  'credit_overall_limit', 
+#                  'oldbid']
+#    
+#    cdView.columns = cdColNames
     
     #%%
     #set filename
@@ -477,6 +512,175 @@ def publishLimits(refreshedData, callExceedLimits, googlesecretkey_location):
     scmGSheet = jthf.writeGsheet(scmView,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
     #permission send
     scmGSheet.share('rahul.kumar@jumbotail.com', role='reader')
+   
+
+#%%
+    writeStatus = "Successful"
+    return writeStatus
+
+#%%
+def publishLimitsTest(refreshedData, callExceedLimits, googlesecretkey_location):
+    import jthelperfunctions as jthf
+    import pandas as pd
+    
+    todStr=pd.to_datetime('today').strftime("%b_%d_%Y")
+    #%%
+    #write permisison and send GS for exceed Calls
+    #callExceedLimits
+    tkrFileName="TEST_ChequeCreditLimitCalls_"+todStr
+    print("Writing ", tkrFileName, " to Googlesheets...")
+    exceededGSheet = jthf.writeGsheet(callExceedLimits,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
+    #permission send
+    exceededGSheet.share('credit@jumbotail.com', role='writer', is_group=True)
+#%%
+    #create view for CD
+    #dummy vars to match current structure
+    refreshedData['maxChequeAmountAccepted'] = refreshedData.maxChequeAmountToday
+    refreshedData['paidPenalty'] = "NoPenaltyData"
+    #refreshedData['everBouncedValue'] = "Removed"
+    #refreshedData['oldBid'] = "Removed"
+    #refreshedData['remainingtoclear'] = "Removed"
+    #refreshedData['overallCreditAvailable'] = "Removed"
+    #%%
+    #select columns for CD View
+    cdCols=['bid', 
+            'storename', 
+            'exceptions', 
+            'deliver', 
+            'takeCheque', 
+            'maxChequeAmountToday', 
+            'maxChequeAmountAccepted', 
+            'currBouncedCount',
+            'currBouncedValue',
+            'paidPenalty',
+            'totalChequesEver',
+            'totalChequesValue',
+            'everBouncedCount',
+            'everBouncedValue',
+            'takeCredit', 
+            'creditProduct',
+            'credit_limit_today',
+            'currCreditBouncedCount',
+            'currCreditBouncedValue',
+            'currCreditOutsCount', 
+            'currCreditOutsValue',
+            'creditTransactionLimit', 
+            'creditOverallLimit',
+            'creditEverBouncedCount',
+            'creditEverBouncedValue',
+            'creditEverUseCount', 
+            'creditEverUseValue']
+    
+    cdView = refreshedData[cdCols]
+    
+    #%%
+    #cols for the old appsheets app
+#    cdColNames = ['bid', 
+#                  'storename', 
+#                  'note', 
+#                  'deliver', 
+#                  'takecheck', 
+#                  'maxcheckamountaccepted_today', 
+#                  'maxcheckamountaccepted', 
+#                  'bounced_check_outstanding', 
+#                  'bounced_check_outstanding_amount', 
+#                  'total_everbounced', 
+#                  'cum_bounce_amount', 
+#                  'hasclearedbounce', 
+#                  'remainingtoclear', 
+#                  'take_credit', 
+#                  'credit_product', 
+#                  'credit_limit_today', 
+#                  'pdc_bounced_cheques', 
+#                  'pdc_oustanding_count', 
+#                  'pdc_oustanding_amount', 
+#                  'overall_credit_limit_available',
+#                  'credit_transaction_limit', 
+#                  'credit_overall_limit', 
+#                  'oldbid']
+#    
+#    cdView.columns = cdColNames
+    
+    #%%
+    #set filename
+    #Check_Credit_Reference_Nov_11_2017
+    tkrFileName="TEST_Check_Credit_Reference_"+todStr
+    print("Writing ", tkrFileName, " to Googlesheets...")
+    #write CD view to GS
+    cdGSheet = jthf.writeGsheet(cdView,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
+    #permission CD sheet and send
+    cdGSheet.share('credit@jumbotail.com', role='reader', is_group=True)
+    #%%    #create view for SCM, mapping from refreshedData
+    scmViewCols = [
+            'BusinessId',
+            'Business Name',
+            'chequeProfileId',
+            'creditProfileId',
+            'eligibleForCheque',
+            'currentChequeLimit',
+            'maxChequeLimit',
+            'outstandingBouncedCheques',
+            'outstandingBouncedChequesAmount',
+            'totalBouncedCheques',
+            'eligibleForCredit',
+            'creditProvider',
+            'currentCreditLimit',
+            'totalCreditLimit',
+            'creditTransactionLimit',
+            'bouncedPDC',
+            'outstandingPDC',
+            'outstandingPDCAmount',
+            'cheque_createdTime',
+            'cheque_lastUpdatedTime',
+            'cheque_lastUpdatedBy',
+            'credit_createdTime',
+            'credit_lastUpdatedTime',
+            'credit_lastUpdatedBy'] 
+    
+    scmView=pd.DataFrame(columns=scmViewCols, index=refreshedData.index)
+    #%%
+    scmView.loc[:,'BusinessId']=refreshedData.bid
+    scmView.loc[:,'Business Name']=refreshedData.storename
+    scmView.loc[:,'chequeProfileId']=''
+    scmView.loc[:,'creditProfileId']=''
+    scmView.loc[:,'eligibleForCheque']=refreshedData.takeCheque
+    scmView.loc[:,'currentChequeLimit']=refreshedData.maxChequeAmountToday
+    scmView.loc[:,'maxChequeLimit']=refreshedData.maxChequeAmountAccepted
+    scmView.loc[:,'outstandingBouncedCheques']=refreshedData.currOutsCount
+    scmView.loc[:,'outstandingBouncedChequesAmount']=refreshedData.currOutsValue
+    scmView.loc[:,'totalBouncedCheques']=refreshedData.everBouncedCount
+    scmView.loc[:,'eligibleForCredit']=refreshedData.takeCredit
+    scmView.loc[:,'creditProvider']=refreshedData.creditProduct
+    scmView.loc[:,'currentCreditLimit']=refreshedData.credit_limit_today
+    scmView.loc[:,'totalCreditLimit']=refreshedData.creditOverallLimit
+    scmView.loc[:,'creditTransactionLimit']=refreshedData.creditTransactionLimit
+    scmView.loc[:,'bouncedPDC']=refreshedData.currCreditBouncedCount
+    scmView.loc[:,'outstandingPDC']=refreshedData.currCreditOutsCount
+    scmView.loc[:,'outstandingPDCAmount']=refreshedData.currCreditOutsValue
+    scmView.loc[:,'cheque_createdTime']=''
+    scmView.loc[:,'cheque_lastUpdatedTime']=''
+    scmView.loc[:,'cheque_lastUpdatedBy']=''
+    scmView.loc[:,'credit_createdTime']=''
+    scmView.loc[:,'credit_lastUpdatedTime']=''
+    scmView.loc[:,'credit_lastUpdatedBy']=''    
+#%% convert yes/no to TRUE/FALSE and product types
+    scmView.eligibleForCheque = scmView.eligibleForCheque.str.replace('yes','TRUE') 
+    scmView.eligibleForCheque = scmView.eligibleForCheque.str.replace('no','FALSE')
+    
+    scmView.eligibleForCredit = scmView.eligibleForCredit.str.replace('yes','TRUE') 
+    scmView.eligibleForCredit = scmView.eligibleForCredit.str.replace('no','FALSE')
+    
+    scmView.creditProvider = scmView.creditProvider.astype(str)
+    scmView.creditProvider = scmView.creditProvider.str.replace('FundsCorner-CASH','FUNDSCORNER_CASH')
+    scmView.creditProvider = scmView.creditProvider.str.replace('FundsCorner-PDC','FUNDSCORNER_PDC')
+    scmView.creditProvider = scmView.creditProvider.str.replace('0','NO_CREDIT')
+    
+#%%    #write SCM view to GS
+    tkrFileName="TEST_Check_Credit_Reference_SCM_"+todStr
+    print("Writing ", tkrFileName, " to Googlesheets...")
+    scmGSheet = jthf.writeGsheet(scmView,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
+    #permission send
+    scmGSheet.share('credit@jumbotail.com', role='reader', is_group=True)
    
 
 #%%

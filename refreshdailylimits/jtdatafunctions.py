@@ -40,6 +40,12 @@ def get_customerdata(rs_user_id,rs_password):
     from customer_details c left join order_details o on o.businessid=c.custbid
     '''
     customerData=jthf.getDataFromRedshift(query,rs_user_id,rs_password)
+    
+    #remove invalid bizids
+    invalidBIZIDs=['BZID-1304477310']
+    customerData = customerData[(customerData.storename!='Test')&(customerData.storename!='Testing')&(~customerData.custbid.isin(invalidBIZIDs))]
+    
+    
     return customerData
 #%%
 def get_ordersDeliveryToday(rs_user_id,rs_password):
@@ -504,7 +510,7 @@ def publishLimits(refreshedData, callExceedLimits, googlesecretkey_location):
     scmView.creditProvider = scmView.creditProvider.astype(str)
     scmView.creditProvider = scmView.creditProvider.str.replace('FundsCorner-CASH','FUNDSCORNER_CASH')
     scmView.creditProvider = scmView.creditProvider.str.replace('FundsCorner-PDC','FUNDSCORNER_PDC')
-    scmView.creditProvider = scmView.creditProvider.str.replace('0','NO_CREDIT')
+    scmView.creditProvider = scmView.creditProvider.str.replace('0','')
     
 #%%    #write SCM view to GS
     tkrFileName="Check_Credit_Reference_SCM_"+todStr
@@ -527,7 +533,7 @@ def publishLimitsTest(refreshedData, callExceedLimits, googlesecretkey_location)
     #%%
     #write permisison and send GS for exceed Calls
     #callExceedLimits
-    tkrFileName="TEST_ChequeCreditLimitCalls_"+todStr
+    tkrFileName="TEST2_ChequeCreditLimitCalls_"+todStr
     print("Writing ", tkrFileName, " to Googlesheets...")
     exceededGSheet = jthf.writeGsheet(callExceedLimits,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
     #permission send
@@ -604,7 +610,7 @@ def publishLimitsTest(refreshedData, callExceedLimits, googlesecretkey_location)
     #%%
     #set filename
     #Check_Credit_Reference_Nov_11_2017
-    tkrFileName="TEST_Check_Credit_Reference_"+todStr
+    tkrFileName="TEST2_Check_Credit_Reference_"+todStr
     print("Writing ", tkrFileName, " to Googlesheets...")
     #write CD view to GS
     cdGSheet = jthf.writeGsheet(cdView,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
@@ -673,10 +679,10 @@ def publishLimitsTest(refreshedData, callExceedLimits, googlesecretkey_location)
     scmView.creditProvider = scmView.creditProvider.astype(str)
     scmView.creditProvider = scmView.creditProvider.str.replace('FundsCorner-CASH','FUNDSCORNER_CASH')
     scmView.creditProvider = scmView.creditProvider.str.replace('FundsCorner-PDC','FUNDSCORNER_PDC')
-    scmView.creditProvider = scmView.creditProvider.str.replace('0','NO_CREDIT')
+    scmView.creditProvider = scmView.creditProvider.str.replace('0','')
     
 #%%    #write SCM view to GS
-    tkrFileName="TEST_Check_Credit_Reference_SCM_"+todStr
+    tkrFileName="TEST2_Check_Credit_Reference_SCM_"+todStr
     print("Writing ", tkrFileName, " to Googlesheets...")
     scmGSheet = jthf.writeGsheet(scmView,'A1',tkrFileName,"Sheet1", googlesecretkey_location)
     #permission send
